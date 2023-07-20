@@ -1,10 +1,9 @@
 import express from "express";
 import cors from "cors";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import dayjs from "dayjs";
 import joi from "joi";
-
 
 const app = express();
 
@@ -50,6 +49,7 @@ app.post("/poll", async (request, response) => {
         }
 
         await db.collection("poll").insertOne(pollSaved)
+        console.log(pollSaved)
         response.status(201).send("Poll registered")
 
     } catch (err) {
@@ -68,6 +68,31 @@ app.get("/poll", async (request, response) => {
     }
 })
 
+//POST - choice
+app.post("/choice", async (request, response) => {
+    const choice = request.body;
+    const poll = await db.collection("poll").findOne({ _id: new ObjectId(choice.pollId) });
+    const choiceMaked = await db.collection("choice").findOne({ title: choice.title });
+    const isExpired = dayjs().isAfter(dayjs(poll.expireAt));
+
+    try {
+        if (!poll)  {
+            return response.status(404).send("This poll does not exist");
+        } else if (choice.title === "") {
+            return response.status(422).send("Title required");
+        } else if (choiceMaked) {
+            return response.status(409).send("Repeated choice");
+        } else if (isExpired) {
+            return response.status(403).send("Poll ended");
+        } else {
+            await db.collection("choice").insertOne(choice);
+            return response.status(201).send("Choice registered");
+        }
+
+    } catch (err) {
+        return response.status(500).send(err.message);
+    }
+});
 
 //Porta
 const porta = 5000
