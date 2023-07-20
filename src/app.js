@@ -104,8 +104,11 @@ app.post("/choice", async (request, response) => {
 //GET - Choice
 app.get("/poll/:id/choice", async (request, response) => {
 
+
+    const pollId = request.params.id
+    
     try {
-        const votes = await db.collection("choice").find().toArray()
+        const votes = await db.collection("choice").find({ pollId: pollId }).toArray()
         response.status(200).send(votes)
     } catch (err) {
         return response.status(500).send(err.message)
