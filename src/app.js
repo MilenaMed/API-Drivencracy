@@ -27,7 +27,7 @@ const db = mongoClient.db()
 
 //Joi
 //const pollSchema = joi.object({
-   // title: joi.string().required(),
+// title: joi.string().required(),
 //})
 
 //POST-poll
@@ -50,11 +50,21 @@ app.post("/poll", async (request, response) => {
         }
 
         await db.collection("poll").insertOne(pollSaved)
-        console.log(pollSaved)
         response.status(201).send("Poll registered")
 
     } catch (err) {
         response.status(500).send(err.message)
+    }
+})
+
+//GET- poll
+app.get("/poll", async (request, response) => {
+
+    try {
+        const polls = await db.collection("poll").find().toArray()
+        response.status(200).send(polls)
+    } catch (err) {
+        return response.status(500).send(err.message)
     }
 })
 
