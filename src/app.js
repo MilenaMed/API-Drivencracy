@@ -25,22 +25,26 @@ catch (err) {
 const db = mongoClient.db()
 
 //Joi
-//const pollSchema = joi.object({
-// title: joi.string().required(),
-//})
+const pollSchema = joi.object({
+ title: joi.string().required(),
+ expireAt: joi.string()
+})
+
+const choiceSchema = joi.object({
+    title: joi.string().required(),
+    pollId: joi.string().required(),
+   })
 
 //POST-poll
 app.post("/poll", async (request, response) => {
     const poll = request.body
 
-    //const validation = pollSchema.validate(request.body)
-    //if (validation.error) {
-    //  return response.status(422).send("Title required")
-    // }
+    console.log(request.body)
 
-    if (poll.title === "") {
-        return response.status(422).send("Title required")
-    }
+    const validation = pollSchema.validate(request.body)
+    if (validation.error) {
+     return response.status(422).send("Title required")
+     }
 
     try {
         const pollSaved = {
@@ -76,10 +80,13 @@ app.post("/choice", async (request, response) => {
     const isExpired = dayjs().isAfter(dayjs(poll.expireAt));
 
     try {
+        const validationChoice = choiceSchema.validate(request.body)
+        if (validationChoice.error) {
+         return response.status(422).send("All fields are required")
+         }
+
         if (!poll)  {
             return response.status(404).send("This poll does not exist");
-        } else if (choice.title === "") {
-            return response.status(422).send("Title required");
         } else if (choiceMaked) {
             return response.status(409).send("Repeated choice");
         } else if (isExpired) {
@@ -104,6 +111,9 @@ app.get("/poll/:id/choice", async (request, response) => {
         return response.status(500).send(err.message)
     }
 })
+
+//POST - Vote
+
 
 //Porta
 const porta = 5000
