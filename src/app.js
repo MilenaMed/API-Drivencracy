@@ -94,6 +94,17 @@ app.post("/choice", async (request, response) => {
     }
 });
 
+//GET - Choice
+app.get("/poll/:id/choice", async (request, response) => {
+
+    try {
+        const votes = await db.collection("choice").find().toArray()
+        response.status(200).send(votes)
+    } catch (err) {
+        return response.status(500).send(err.message)
+    }
+})
+
 //Porta
 const porta = 5000
 app.listen(porta, () => console.log(`Servidor rodando na porta ${porta}`));
