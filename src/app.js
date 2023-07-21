@@ -26,14 +26,14 @@ const db = mongoClient.db()
 
 //Joi
 const pollSchema = joi.object({
- title: joi.string().required(),
- expireAt: joi.string()
+    title: joi.string().required(),
+    expireAt: joi.string()
 })
 
 const choiceSchema = joi.object({
     title: joi.string().required(),
     pollId: joi.string().required(),
-   })
+})
 
 //POST-poll
 app.post("/poll", async (request, response) => {
@@ -43,8 +43,8 @@ app.post("/poll", async (request, response) => {
 
     const validation = pollSchema.validate(request.body)
     if (validation.error) {
-     return response.status(422).send("Title required")
-     }
+        return response.status(422).send("Title required")
+    }
 
     try {
         const pollSaved = {
@@ -74,7 +74,7 @@ app.get("/poll", async (request, response) => {
 
 //POST - choice
 app.post("/choice", async (request, response) => {
-    const choice = request.body;
+    const choice = request.body
     const poll = await db.collection("poll").findOne({ _id: new ObjectId(choice.pollId) });
     const choiceMaked = await db.collection("choice").findOne({ title: choice.title });
     const isExpired = dayjs().isAfter(dayjs(poll.expireAt));
@@ -82,10 +82,10 @@ app.post("/choice", async (request, response) => {
     try {
         const validationChoice = choiceSchema.validate(request.body)
         if (validationChoice.error) {
-         return response.status(422).send("All fields are required")
-         }
+            return response.status(422).send("All fields are required")
+        }
 
-        if (!poll)  {
+        if (!poll) {
             return response.status(404).send("This poll does not exist");
         } else if (choiceMaked) {
             return response.status(409).send("Repeated choice");
@@ -93,6 +93,7 @@ app.post("/choice", async (request, response) => {
             return response.status(403).send("Poll ended");
         } else {
             await db.collection("choice").insertOne(choice);
+            console.log(choice)
             return response.status(201).send("Choice registered");
         }
 
@@ -103,10 +104,7 @@ app.post("/choice", async (request, response) => {
 
 //GET - Choice
 app.get("/poll/:id/choice", async (request, response) => {
-
-
     const pollId = request.params.id
-    
     try {
         const votes = await db.collection("choice").find({ pollId: pollId }).toArray()
         response.status(200).send(votes)
@@ -116,7 +114,33 @@ app.get("/poll/:id/choice", async (request, response) => {
 })
 
 //POST - Vote
+app.post("/choice/:id/vote", async (request, response) => {
 
+    const choiceMaked = await db.collection("choice").findOne({ pollId: request.params.id })
+    const poll = await db.collection("poll").findOne({ _id: new ObjectId(request.params.id) });
+    const isExpired = dayjs().isAfter(dayjs(poll.expireAt));
+
+
+    try {
+        if (!choiceMaked) {
+            return response.status(404).send("This poll does not exist");
+        }
+        else if (isExpired) {
+            return response.status(403).send("Poll ended");
+        }
+
+        const vote = {
+            createdAt: dayjs().format("YYYY-MM-DD HH:MM"),
+            choiceId: request.params.id
+        }
+
+        await db.collection("votes").insertOne(vote)
+        console.log(vote)
+        response.status(201).send("Vote registered")
+    } catch (error) {
+        return response.status(500).send(err.message)
+    }
+})
 
 //Porta
 const porta = 5000
