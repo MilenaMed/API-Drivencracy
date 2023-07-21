@@ -182,5 +182,7 @@ app.get("/poll/:id/result", async (request, response) => {
 })
 
 //Porta
-const porta = 5000
-app.listen(porta, () => console.log(`Servidor rodando na porta ${porta}`));
+const port = process.env.PORT || 5000
+app.listen(port, () => {
+	console.log(`Servidor rodando na porta ${port}`)
+})
