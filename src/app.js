@@ -116,28 +116,67 @@ app.get("/poll/:id/choice", async (request, response) => {
 //POST - Vote
 app.post("/choice/:id/vote", async (request, response) => {
 
-    const choiceMaked = await db.collection("choice").findOne({ pollId: request.params.id })
-    const poll = await db.collection("poll").findOne({ _id: new ObjectId(request.params.id) });
-    const isExpired = dayjs().isAfter(dayjs(poll.expireAt));
+    const choiceMaked = await db.collection("choice").findOne({ _id: new ObjectId(request.params.id) })
+    console.log(choiceMaked)
 
 
     try {
         if (!choiceMaked) {
             return response.status(404).send("This poll does not exist");
-        }
-        else if (isExpired) {
-            return response.status(403).send("Poll ended");
-        }
+        } else {
+            const poll = await db.collection("poll").findOne({ _id: new ObjectId(choiceMaked.pollId) });
+            const isExpired = dayjs().isAfter(dayjs(poll.expireAt));
+            console.log(poll)
+            if (isExpired) {
+                return response.status(403).send("Poll ended");
+            }
+            const vote = {
+                createdAt: dayjs().format("YYYY-MM-DD HH:MM"),
+                choiceId: request.params.id
+            }
 
-        const vote = {
-            createdAt: dayjs().format("YYYY-MM-DD HH:MM"),
-            choiceId: request.params.id
+            await db.collection("votes").insertOne(vote)
+            response.status(201).send("Vote registered")
         }
-
-        await db.collection("votes").insertOne(vote)
-        console.log(vote)
-        response.status(201).send("Vote registered")
     } catch (error) {
+        return response.status(500).send(err.message)
+    }
+})
+
+//GET - Votes
+app.get("/poll/:id/result", async (request, response) => {
+
+    try {
+        const poll = await db.collection("poll").findOne({ _id: new ObjectId(request.params.id) });
+
+        if (!poll) {
+            return response.status(404).send("This poll does not exist");
+        }
+        
+        const choices = await db.collection("choice").find({ pollId: request.params.id }).toArray();
+        let result = {};
+        let maxVotes = 0;
+
+        for (const choice of choices) {
+            const votesCount = await db.collection("votes").countDocuments({ choiceId: choice._id.toString() });
+            if (votesCount > maxVotes) {
+                maxVotes = votesCount;
+                result = {
+                    title: choice.title,
+                    votes: votesCount
+                };
+            }
+        }
+
+        await db.collection("poll").findOneAndUpdate(
+            { _id: new ObjectId(request.params.id) },
+            { $set: { result } })
+
+
+        const talliedVotes = await db.collection("poll").findOne({ _id: new ObjectId(request.params.id) })
+        return response.status(200).send(talliedVotes);
+
+    } catch (err) {
         return response.status(500).send(err.message)
     }
 })
